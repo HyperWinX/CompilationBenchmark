@@ -14,8 +14,11 @@ def execute(command: str) -> int:
     process = subprocess.Popen(command, shell=True)
 
     max_mem = 0
+    subproc = psutil.Process(process.pid)
     while (process.poll() is None):
-        memory = psutil.Process(process.pid).memory_info().rss
+        memory = 0
+        for proc in subproc.children(recursive=True):
+            memory += proc.memory_info().rss
         if (memory > max_mem): max_mem = memory
     return max_mem / 1024 / 1024
 
