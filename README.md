@@ -42,5 +42,5 @@ Optional arguments:
 ```
 python3 bench.py --languages=c,cpp --lines=500000
 ```
---languages argument will set which languages to test. Supported codes: c, cpp, asm, rust, zig
+--languages argument will set which languages to test. Supported codes: c, cpp, asm, rust, zig  
 --lines arguments will set count of code lines to compile for every language.
