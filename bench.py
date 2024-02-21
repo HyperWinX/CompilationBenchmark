@@ -16,10 +16,14 @@ def execute(command: str) -> int:
     max_mem = 0
     subproc = psutil.Process(process.pid)
     while (process.poll() is None):
-        memory = 0
-        for proc in subproc.children(recursive=True):
-            memory += proc.memory_info().rss
-        if (memory > max_mem): max_mem = memory
+        try:
+            memory = 0
+            for proc in subproc.children(recursive=True):
+                memory += proc.memory_info().rss
+            memory += subproc.memory_info().rss
+            if (memory > max_mem): max_mem = memory
+        except:
+            a = 0
     return max_mem / 1024 / 1024
 
 def do_cleanup() -> None:
@@ -55,12 +59,12 @@ asm_source_line = "label%d: SUM %d, %d\n"
 rust_source_line = "pub fn func%d() -> usize{%d + %d}\n"
 zig_source_line = "export fn func%d() i64 {return %d + %d;}\n"
 
-def validate_languages(languages_to_bench):
+def validate_languages(languages_to_bench: list) -> None:
     for lang in languages_to_bench:
         if (lang not in supported_languages):
             raise NotImplementedError(f"Language {lang} is not implemented")
 
-def create_directories_structure():
+def create_directories_structure() -> None:
     os.mkdir("sources")
     for lang in supported_languages:
         os.mkdir(f"sources/{lang}")
@@ -120,7 +124,7 @@ def generate_sources(lang: str, linecount: int) -> float:
 
 # Compilers
 
-def compile_sources(lang: str):
+def compile_sources(lang: str) -> Tuple[float, int]:
     start = timer()
     max_mem_mb = 0
     if (lang == "c"):
@@ -153,9 +157,7 @@ def main():
     for lang in languages_to_bench:
         langobj = Lang(nice_lang_name(lang), 0, 0)
         langobj.gen_time = generate_sources(lang, args.lines)
-        tmp = compile_sources(lang)
-        langobj.compile_time = tmp[0]
-        langobj.max_mem_mb = tmp[1]
+        langobj.compile_time, langobj.max_mem_mb = compile_sources(lang)
         langs.append(langobj)
     do_cleanup()
     print()
