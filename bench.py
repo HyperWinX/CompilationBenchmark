@@ -1,12 +1,16 @@
 # Libraries import
 
 from timeit import default_timer as timer
-import termcolor
-import argparse
 import os
 import random
-import psutil
-import subprocess
+
+try:
+    import termcolor
+    import argparse
+    import psutil
+    import subprocess
+except:
+    os.system("pip install termcolor argparse psutil subprocess")
 
 # Some additional stuff
 
@@ -46,6 +50,8 @@ cpp_compile_command = "g++ -shared sources/cpp/main.cpp -o sources/cpp/main.so"
 asm_compile_command = "nasm sources/asm/main.asm -f elf64 -o sources/asm/main.o"
 rust_compile_command = "cargo build --release --manifest-path sources/rust/Cargo.toml"
 zig_compile_command = "zig build-lib sources/zig/main.zig"
+# Compiler check commands
+compiler_checks = {"gcc": "gcc -v"}
 # Source lines
 asm_start_source = ["%macro SUM 2\n",
                     "    mov rax, %1\n", 
@@ -63,6 +69,9 @@ def validate_languages(languages_to_bench: list) -> None:
     for lang in languages_to_bench:
         if (lang not in supported_languages):
             raise NotImplementedError(f"Language {lang} is not implemented")
+
+def check_compilers(langs: list[str]) -> None:
+    
 
 def create_directories_structure() -> None:
     os.mkdir("sources")
