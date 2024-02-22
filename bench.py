@@ -10,9 +10,20 @@ try:
     import psutil
     import subprocess
 except:
-    os.system("pip install termcolor argparse psutil subprocess")
+    if (os.system("pip install termcolor argparse psutil")):
+        print("Failed to install packages, exiting...")
+        exit(1)
+finally:
+    import termcolor
+    import argparse
+    import psutil
+    import subprocess
 
 # Some additional stuff
+
+def crash(msg: str) -> None:
+    print(termcolor.colored(msg, "red"))
+    exit(1)
 
 def execute(command: str) -> int:
     process = subprocess.Popen(command, shell=True)
@@ -40,30 +51,55 @@ class Lang:
         self.compile_time = compile_time
         self.max_mem_mb = 0
 
+# Line generators
+
+def generate_code_line(i: int, line: str) -> str:
+    return line % (i, random.randint(0, 0xFFFFFFFF), random.randint(0, 0xFFFFFFFF))
+
 # Supported languages list
-supported_languages = ['c', 'cpp', 'asm', 'rust', 'zig']
+supported_languages = ['c', 'cpp', 'asm', 'rust', 'zig', 'linker']
 # List of lang objects to make statistics at the end
 langs = []
-# Compilation commands
-c_compile_command = "gcc -shared sources/c/main.c -o sources/c/main.so"
-cpp_compile_command = "g++ -shared sources/cpp/main.cpp -o sources/cpp/main.so"
-asm_compile_command = "nasm sources/asm/main.asm -f elf64 -o sources/asm/main.o"
-rust_compile_command = "cargo build --release --manifest-path sources/rust/Cargo.toml"
-zig_compile_command = "zig build-lib sources/zig/main.zig"
-# Compiler check commands
-compiler_checks = {"gcc": "gcc -v"}
-# Source lines
+compiler_checks = {
+    "c": "$(which gcc) -v 2> /dev/null",
+    "cpp": "$(which g++) -v 2> /dev/null",
+    "asm": "$(which nasm) -v > /dev/null",
+    "rust": "$(which cargo) -V > /dev/null",
+    "zig": "zig",
+    "linker": "ld -v > /dev/null"
+}
+compile_command_assoc = {
+    "c": "gcc -shared sources/c/main.c -o sources/c/main.so 2> /dev/null",
+    "cpp": "g++ -shared sources/cpp/main.cpp -o sources/cpp/main.so 2> /dev/null",
+    "asm": "nasm sources/asm/main.asm -f elf64 -o sources/asm/main.o > /dev/null",
+    "rust": "cargo build --release --manifest-path sources/rust/Cargo.toml > /dev/null",
+    "zig": "zig build-lib sources/zig/main.zig > /dev/null",
+    "linker": "for file in sources/ld/*.c; do gcc -c $file -o {file%.c}.o; done && gcc sources/ld/*.o -o sources/ld/main.so > /dev/null"
+}
+source_line_assoc = {
+    "c": "long cfunc%d(void){return (long)%d + (long)%d;}\n",
+    "cpp": "long cppfunc%d(void){return (long)%d + (long)%d;}\n",
+    "asm": "label%d: SUM %d, %d\n",
+    "rust": "pub fn func%d() -> usize{%d + %d}\n",
+    "zig": "export fn func%d() i64 {return %d + %d;}\n",
+}
+
+nice_lang_name_assoc = {
+    "c": "C",
+    "cpp": "C++",
+    "asm": "Assembly",
+    "rust": "Rust",
+    "zig": "Zig",
+    "linker": "LD"
+}
+
+# Start source lines
 asm_start_source = ["%macro SUM 2\n",
                     "    mov rax, %1\n", 
                     "    mov rbx, %2\n", 
                     "    add rax, rbx\n", 
                     "%endmacro\n"]
 rust_start_source = ["fn main(){}\n"]
-c_source_line = "long cfunc%d(void){return (long)%d + (long)%d;}\n"
-cpp_source_line = "long cppfunc%d(void){return (long)%d + (long)%d;}\n"
-asm_source_line = "label%d: SUM %d, %d\n"
-rust_source_line = "pub fn func%d() -> usize{%d + %d}\n"
-zig_source_line = "export fn func%d() i64 {return %d + %d;}\n"
 
 def validate_languages(languages_to_bench: list) -> None:
     for lang in languages_to_bench:
@@ -71,36 +107,14 @@ def validate_languages(languages_to_bench: list) -> None:
             raise NotImplementedError(f"Language {lang} is not implemented")
 
 def check_compilers(langs: list[str]) -> None:
+    for lang in langs:
+        if (os.system(compiler_checks[lang])):
+            crash("Compiler for language %s not found!" % (nice_lang_name_assoc[lang]))
     
-
 def create_directories_structure() -> None:
     os.mkdir("sources")
     for lang in supported_languages:
         os.mkdir(f"sources/{lang}")
-
-def nice_lang_name(lang: str) -> str:
-    if (lang == "c"): return "C"
-    elif (lang == "cpp"): return "C++"
-    elif (lang == "asm"): return "Assembly"
-    elif (lang == "rust"): return "Rust"
-    elif (lang == "zig"): return "Zig"
-
-# Line generators
-
-def generate_c_line(i: int) -> str:
-    return c_source_line % (i, random.randint(0, 0xFFFFFFFF), random.randint(0, 0xFFFFFFFF))
-
-def generate_cpp_line(i: int) -> str:
-    return cpp_source_line % (i, random.randint(0, 0xFFFFFFFF), random.randint(0, 0xFFFFFFFF))
-
-def generate_asm_line(i: int) -> str:
-    return asm_source_line % (i, random.randint(0, 0xFFFFFFFF), random.randint(0, 0xFFFFFFFF))
-
-def generate_rust_line(i: int) -> str:
-    return rust_source_line % (i, random.randint(0, 0xFFFFFFFF), random.randint(0, 0xFFFFFFFF))
-
-def generate_zig_line(i: int) -> str:
-    return zig_source_line % (i, random.randint(0, 0xFFFFFFFF), random.randint(0, 0xFFFFFFFF))
 
 # Generators
 
@@ -115,42 +129,30 @@ def generate_sources(lang: str, linecount: int) -> float:
         os.system("cargo new sources/rust --lib > /dev/null")
         source = open("sources/rust/src/main.rs", "w")
         source.writelines(rust_start_source)
-    for i in range(linecount):
-        if (lang == "c"):
-            source.write(generate_c_line(i))
-        elif (lang == "cpp"):
-            source.write(generate_cpp_line(i))
-        elif (lang == "asm"):
-            source.write(generate_asm_line(i))
-        elif (lang == "rust"):
-            source.write(generate_rust_line(i))
-        elif (lang == "zig"):
-            source.write(generate_zig_line(i))
-    source.close()
+    if (lang != "linker"):
+        for i in range(linecount):
+            source.write(generate_code_line(i, source_line_assoc[lang]))
+    else:
+        source.close()
+        for i in range(10):
+            source = open("sources/ld/main%d.c" % i)
+            for i in range(linecount):
+                source.write(generate_code_line(i, source_line_assoc["c"]))
+            source.close()
+    if (not source.closed):
+        source.close()
     end = timer()
-    print(termcolor.colored(f"[ GEN ]: Generated {linecount} lines for language {nice_lang_name(lang)}", "green"))
+    print(termcolor.colored(f"[ GEN ]: Generated {linecount} lines for language {nice_lang_name_assoc[lang]}", "green"))
     return end - start
 
 # Compilers
 
-def compile_sources(lang: str) -> Tuple[float, int]:
+def compile_sources(lang: str) -> tuple[float, int]:
     start = timer()
-    max_mem_mb = 0
-    if (lang == "c"):
-        max_mem_mb = execute(c_compile_command)
-    elif (lang == "cpp"):
-        max_mem_mb = execute(cpp_compile_command)
-    elif (lang == "asm"):
-        max_mem_mb = execute(asm_compile_command)
-    elif (lang == "rust"):
-        max_mem_mb = execute(rust_compile_command)
-    elif (lang == "zig"):
-        max_mem_mb = execute(zig_compile_command)
+    max_mem_mb = execute(compile_command_assoc[lang])
     end = timer()
-    print(termcolor.colored(f"[ COM ]: Compiled source for language {nice_lang_name(lang)}", "green"))
+    print(termcolor.colored(f"[ COM ]: Compiled source for language {nice_lang_name_assoc[lang]}", "green"))
     return (end - start, max_mem_mb)
-
-# Benchmarks
 
 # Entry point
 
@@ -161,13 +163,13 @@ def main():
     args = parser.parse_args()
     languages_to_bench = args.languages.split(',')
     validate_languages(languages_to_bench)
+    check_compilers(languages_to_bench)
     create_directories_structure()
-    current_path = os.getcwd()
     for lang in languages_to_bench:
-        langobj = Lang(nice_lang_name(lang), 0, 0)
+        langobj = Lang(nice_lang_name_assoc[lang], 0, 0)
         langobj.gen_time = generate_sources(lang, args.lines)
         langobj.compile_time, langobj.max_mem_mb = compile_sources(lang)
-        langs.append(langobj)
+        langs.append(langobj)   
     do_cleanup()
     print()
     for langobj in langs:
