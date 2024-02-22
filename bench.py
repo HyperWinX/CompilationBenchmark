@@ -74,7 +74,7 @@ compile_command_assoc = {
     "asm": "nasm sources/asm/main.asm -f elf64 -o sources/asm/main.o > /dev/null",
     "rust": "cargo build --release --manifest-path sources/rust/Cargo.toml > /dev/null",
     "zig": "zig build-lib sources/zig/main.zig > /dev/null",
-    "linker": "for file in sources/ld/*.c; do gcc -c $file -o {file%.c}.o; done && gcc sources/ld/*.o -o sources/ld/main.so > /dev/null"
+    "linker": "gcc sources/linker/*.o -o sources/linker/main.so -shared > /dev/null"
 }
 source_line_assoc = {
     "c": "long cfunc%d(void){return (long)%d + (long)%d;}\n",
@@ -134,10 +134,12 @@ def generate_sources(lang: str, linecount: int) -> float:
             source.write(generate_code_line(i, source_line_assoc[lang]))
     else:
         source.close()
-        for i in range(10):
-            source = open("sources/ld/main%d.c" % i)
-            for i in range(linecount):
-                source.write(generate_code_line(i, source_line_assoc["c"]))
+        funcnum = 0
+        for i in range(100):
+            source = open("sources/linker/main%d.c" % i, "w")
+            for _ in range(linecount):
+                source.write(generate_code_line(funcnum, source_line_assoc["c"]))
+                funcnum += 1
             source.close()
     if (not source.closed):
         source.close()
@@ -149,7 +151,13 @@ def generate_sources(lang: str, linecount: int) -> float:
 
 def compile_sources(lang: str) -> tuple[float, int]:
     start = timer()
-    max_mem_mb = execute(compile_command_assoc[lang])
+    if (lang == "linker"):
+        for i in range(100):
+            os.system("gcc %s%d.c -c -o %s%d.o" % ("sources/linker/main", i, "sources/linker/main", i))
+            start = timer()
+            max_mem_mb = execute(compile_command_assoc[lang])
+    else:
+        max_mem_mb = execute(compile_command_assoc[lang])
     end = timer()
     print(termcolor.colored(f"[ COM ]: Compiled source for language {nice_lang_name_assoc[lang]}", "green"))
     return (end - start, max_mem_mb)
