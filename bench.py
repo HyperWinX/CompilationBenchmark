@@ -63,18 +63,18 @@ langs = []
 compiler_checks = {
     "c": "$(which gcc) -v 2> /dev/null",
     "cpp": "$(which g++) -v 2> /dev/null",
-    "asm": "$(which nasm) -v > /dev/null",
-    "rust": "$(which cargo) -V > /dev/null",
-    "zig": "zig",
-    "linker": "ld -v > /dev/null"
+    "asm": "$(which nasm) -v 2> /dev/null",
+    "rust": "$(which cargo) -V 2> /dev/null",
+    "zig": "zig 2> /dev/null",
+    "linker": "ld -v 2> /dev/null"
 }
 compile_command_assoc = {
     "c": "gcc -shared sources/c/main.c -o sources/c/main.so 2> /dev/null",
     "cpp": "g++ -shared sources/cpp/main.cpp -o sources/cpp/main.so 2> /dev/null",
-    "asm": "nasm sources/asm/main.asm -f elf64 -o sources/asm/main.o > /dev/null",
-    "rust": "cargo build --release --manifest-path sources/rust/Cargo.toml > /dev/null",
-    "zig": "zig build-lib sources/zig/main.zig > /dev/null",
-    "linker": "gcc sources/linker/*.o -o sources/linker/main.so -shared > /dev/null"
+    "asm": "nasm sources/asm/main.asm -f elf64 -o sources/asm/main.o 2> /dev/null",
+    "rust": "cargo build --release --manifest-path sources/rust/Cargo.toml 2> /dev/null",
+    "zig": "zig build-lib sources/zig/main.zig 2> /dev/null",
+    "linker": "gcc sources/linker/*.o -o sources/linker/main.so -shared 2> /dev/null"
 }
 source_line_assoc = {
     "c": "long cfunc%d(void){return (long)%d + (long)%d;}\n",
