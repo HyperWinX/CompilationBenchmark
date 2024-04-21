@@ -30,8 +30,18 @@
 This is a small benchmark written in Python, and can measure one-core performance of compilers on big code blocks.
 
 ## Default configuration
-All languages: C, C++, ASM, Rust, Zig
+All languages: C, C++, ASM, Rust, Zig, LD (not language, but it can benchmark linker)
 Code size: 100.000 lines of code
+
+## Requirements for full test
+Required packages for running full test:
+- Python 3
+- GCC
+- G++
+- Cargo
+- Zig
+- NASM
+- GNU LD (installed by default if you have gcc/g++)
 
 ## Usage
 Run with default configuration:

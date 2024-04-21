@@ -45,11 +45,16 @@ def do_cleanup() -> None:
     os.system("rm -rf sources libmain*")
 
 class Lang:
-    def __init__(self, lang, gen_time, compile_time):
+    def __init__(self, lang, gen_time, compile_time) -> None:
         self.lang = lang
         self.gen_time = gen_time
         self.compile_time = compile_time
         self.max_mem_mb = 0
+    
+    def do_rounding(self) -> None:
+        self.gen_time = round(float(self.gen_time), 2)
+        self.compile_time = round(float(self.compile_time), 2)
+        self.max_mem_mb = round(float(self.max_mem_mb), 2)
 
 # Line generators
 
@@ -177,13 +182,14 @@ def main():
         langobj = Lang(nice_lang_name_assoc[lang], 0, 0)
         langobj.gen_time = generate_sources(lang, args.lines)
         langobj.compile_time, langobj.max_mem_mb = compile_sources(lang)
-        langs.append(langobj)   
+        langs.append(langobj)
     do_cleanup()
     print()
     for langobj in langs:
+        langobj.do_rounding()
         print(termcolor.colored(f"Statistics of language {langobj.lang}:", "green"))
-        print(termcolor.colored(f"    Code generation time: {langobj.gen_time}", "green"))
-        print(termcolor.colored(f"    Code compilation time: {langobj.compile_time}", "green"))
+        print(termcolor.colored(f"    Code generation time: {langobj.gen_time}s", "green"))
+        print(termcolor.colored(f"    Code compilation time: {langobj.compile_time}s", "green"))
         print(termcolor.colored(f"    Maximum memory consumption: {langobj.max_mem_mb}MB\n", "green"))
     
 
